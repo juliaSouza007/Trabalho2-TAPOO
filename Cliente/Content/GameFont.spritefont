@@ -7,9 +7,22 @@
     <UseKerning>true</UseKerning>
     <Style>Regular</Style>
     <CharacterRegions>
+      <!-- ASCII básico -->
       <CharacterRegion>
         <Start>&#32;</Start>
         <End>&#126;</End>
+      </CharacterRegion>
+
+      <!-- Setas, caixas, símbolos -->
+      <CharacterRegion>
+        <Start>&#x2500;</Start>
+        <End>&#x257F;</End>
+      </CharacterRegion>
+
+      <!-- Acentos e cedilha -->
+      <CharacterRegion>
+        <Start>À</Start>
+        <End>ÿ</End>
       </CharacterRegion>
     </CharacterRegions>
   </Asset>

@@ -42,6 +42,19 @@ namespace Cliente
         private GameState? _estadoJogoRede;
         private string _meuClienteId = string.Empty;
 
+        // ========= MENU ==========
+        private enum EstadoTela
+        {
+            MenuInicial,
+            Jogo,
+            Configuracao
+        }
+
+        private EstadoTela _estadoAtual = EstadoTela.MenuInicial;
+
+        private int _indiceOpcaoMenu = 0;
+        private readonly string[] _opcoesMenu = { "Iniciar Partida", "Sair" };
+
         public JogoAsteroidesCliente()
         {
             _graphics = new GraphicsDeviceManager(this);
@@ -115,52 +128,90 @@ namespace Cliente
 
         protected override void Update(GameTime gameTime)
         {
-            var keyboardState = Keyboard.GetState();
+            var teclado = Keyboard.GetState();
             _frameCount++;
 
-            // Verificar ESC para sair
-            if (keyboardState.IsKeyDown(Keys.Escape))
-                Exit();
-
-            // Verificar GameOver (local ou do servidor)
+            // GameOver atual (local ou remoto)
             bool gameOverAtual = _gameOver || (_modoRede && _estadoJogoRede?.GameOver == true);
 
-            // Verificar R para tentar reconectar (apenas se não estiver em modo rede e não estiver em GameOver)
-            if (keyboardState.IsKeyDown(Keys.R) && !_keyboardStateAnterior.IsKeyDown(Keys.R))
+            // ===== MENU =====
+            if (_estadoAtual == EstadoTela.MenuInicial)
             {
-                if (!_modoRede && !gameOverAtual)
+                if (Apertou(Keys.Up, teclado))
+                {
+                    _indiceOpcaoMenu--;
+                    if (_indiceOpcaoMenu < 0) _indiceOpcaoMenu = _opcoesMenu.Length - 1;
+                }
+                if (Apertou(Keys.Down, teclado))
+                {
+                    _indiceOpcaoMenu++;
+                    if (_indiceOpcaoMenu >= _opcoesMenu.Length) _indiceOpcaoMenu = 0;
+                }
+
+                if (Apertou(Keys.Enter, teclado))
+                {
+                    switch (_indiceOpcaoMenu)
+                    {
+                        case 0: // Iniciar
+                            ReiniciarPartida();
+                            _estadoAtual = EstadoTela.Jogo;
+                            break;
+                        case 1: // Sair
+                            Exit();
+                            break;
+                    }
+                }
+
+                // ESC → sair
+                if (Apertou(Keys.Escape, teclado))
+                {
+                    Exit();
+                }
+
+                _keyboardStateAnterior = teclado;
+                return;
+            }
+
+            // ===== JOGO =====
+            if (_estadoAtual == EstadoTela.Jogo)
+            {
+                // ESC → sair do jogo
+                if (Apertou(Keys.Escape, teclado))
+                {
+                    Exit();
+                }
+
+                // R → tentar reconectar (se aplicável)
+                if (Apertou(Keys.R, teclado) && !_modoRede && !gameOverAtual)
                 {
                     _ = Task.Run(TentarConectarRede);
                 }
-            }
 
-            if (!gameOverAtual)
-            {
-                // Processar input
-                ProcessarTeclas(keyboardState);
-
-                // Se estiver em modo rede, enviar input para o servidor
-                if (_modoRede && _conectado && _networkClient != null)
+                if (!gameOverAtual)
                 {
-                    var input = new PlayerInput
+                    ProcessarTeclas(teclado);
+
+                    if (_modoRede && _conectado && _networkClient != null)
                     {
-                        Esquerda = _esquerda,
-                        Direita = _direita,
-                        Cima = _cima,
-                        Baixo = _baixo,
-                        Atirar = keyboardState.IsKeyDown(Keys.Space) && !_keyboardStateAnterior.IsKeyDown(Keys.Space),
-                        Reiniciar = keyboardState.IsKeyDown(Keys.R) && !_keyboardStateAnterior.IsKeyDown(Keys.R) && gameOverAtual
-                    };
-                    _ = Task.Run(() => _networkClient.EnviarInputAsync(input));
-                }
-                else
-                {
-                    // Atualizar jogo local (lógica original)
-                    AtualizarJogo();
+                        var input = new PlayerInput
+                        {
+                            Esquerda = _esquerda,
+                            Direita = _direita,
+                            Cima = _cima,
+                            Baixo = _baixo,
+                            Atirar = Apertou(Keys.Space, teclado),
+                            Reiniciar = false
+                        };
+                        _ = Task.Run(() => _networkClient.EnviarInputAsync(input));
+                    }
+                    else
+                    {
+                        AtualizarJogo();
+                    }
                 }
             }
 
-            _keyboardStateAnterior = keyboardState;
+            _keyboardStateAnterior = teclado;
             base.Update(gameTime);
         }
 
@@ -241,6 +292,27 @@ namespace Cliente
         }
 
         /// <summary>
+        /// Reinicia o jogo 
+        /// </summary>
+        private void ReiniciarPartida()
+        {
+            _gameOver = false;
+            _pontuacao = 0;
+            _tiros.Clear();
+            _asteroides.Clear();
+            _estadoJogoRede = null;   // evita reaproveitar estado antigo da rede
+            _modoRede = false;        // opcional: só ativa rede quando conectar de novo
+        }
+
+        /// <summary>
+        /// Helper de aperto de teclas
+        /// </summary>
+        private bool Apertou(Keys tecla, KeyboardState atual)
+        {
+            return atual.IsKeyDown(tecla) && !_keyboardStateAnterior.IsKeyDown(tecla);
+        }
+
+        /// <summary>
         /// Cria um novo asteroide (lógica original)
         /// </summary>
         private Asteroide NovoAsteroide()
@@ -253,6 +325,25 @@ namespace Cliente
         protected override void Draw(GameTime gameTime)
         {
             GraphicsDevice.Clear(Color.Black);
+
+            if (_estadoAtual == EstadoTela.MenuInicial)
+            {
+                _spriteBatch.Begin();
+
+                DesenharTexto("JOGO ASTEROIDES", new Vector2(400, 120), Color.White, 2f);
+
+                for (int i = 0; i < _opcoesMenu.Length; i++)
+                {
+                    Color cor = (i == _indiceOpcaoMenu) ? Color.Yellow : Color.Gray;
+                    DesenharTexto(_opcoesMenu[i], new Vector2(400, 200 + i * 40), cor, 1.2f);
+                }
+
+
+                DesenharTexto("Use ENTER para iniciar || Use as SETAS para navegar", new Vector2(400, 360), Color.White, 0.8f);
+
+                _spriteBatch.End();
+                return; // não desenha o jogo ainda
+            }
 
             _spriteBatch.Begin();
 
