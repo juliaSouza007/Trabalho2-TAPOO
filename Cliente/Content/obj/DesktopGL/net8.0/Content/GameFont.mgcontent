@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PipelineBuildEvent xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <SourceFile>/home/a2023952969/Documentos/Trabalho2-TAPOO/Cliente/Content/GameFont.spritefont</SourceFile>
+  <SourceTime>2025-08-20T14:23:16.5735585-03:00</SourceTime>
+  <DestFile>/home/a2023952969/Documentos/Trabalho2-TAPOO/Cliente/Content/bin/DesktopGL/Content/GameFont.xnb</DestFile>
+  <DestTime>2025-08-20T14:23:27.361754-03:00</DestTime>
+  <Importer>FontDescriptionImporter</Importer>
+  <ImporterTime>2025-06-02T07:31:02-03:00</ImporterTime>
+  <Processor>FontDescriptionProcessor</Processor>
+  <ProcessorTime>2025-06-02T07:31:02-03:00</ProcessorTime>
+  <Parameters>
+    <Key>TextureFormat</Key>
+    <Value>Compressed</Value>
+  </Parameters>
+  <Dependencies />
+  <BuildAsset />
+  <BuildOutput />
+</PipelineBuildEvent>

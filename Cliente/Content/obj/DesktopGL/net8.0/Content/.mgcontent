@@ -4,7 +4,7 @@
   <Platform>DesktopGL</Platform>
   <Config />
   <SourceFiles>
-    <File>C:/Users/Sergio/Desktop/TrabalhoIzadora/Cliente/Content/GameFont.spritefont</File>
+    <File>/home/a2023952969/Documentos/Trabalho2-TAPOO/Cliente/Content/GameFont.spritefont</File>
   </SourceFiles>
   <DestFiles>
     <File xsi:nil="true" />
