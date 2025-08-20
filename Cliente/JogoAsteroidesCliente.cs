@@ -38,6 +38,7 @@ namespace Cliente
         private bool _modoRede = false;
         private bool _conectado = false;
         private string _statusConexao = "Modo Offline";
+        private string _mensagemErro = string.Empty;
         private GameState? _estadoJogoRede;
         private string _meuClienteId = string.Empty;
 
@@ -46,7 +47,7 @@ namespace Cliente
             _graphics = new GraphicsDeviceManager(this);
             Content.RootDirectory = "Content";
             IsMouseVisible = true;
-            
+
             // Configurar tamanho da janela
             _graphics.PreferredBackBufferWidth = 800;
             _graphics.PreferredBackBufferHeight = 600;
@@ -55,10 +56,10 @@ namespace Cliente
         protected override void Initialize()
         {
             base.Initialize();
-            
+
             // Inicializar jogo original
             _nave = new Nave(new Vector2(_graphics.PreferredBackBufferWidth / 2f, _graphics.PreferredBackBufferHeight - 60));
-            
+
             // Tentar conectar à rede (opcional)
             _ = Task.Run(TentarConectarRede);
         }
@@ -66,7 +67,7 @@ namespace Cliente
         protected override void LoadContent()
         {
             _spriteBatch = new SpriteBatch(GraphicsDevice);
-            
+
             // Criar uma textura de pixel para desenhar formas básicas
             _pixelTexture = new Texture2D(GraphicsDevice, 1, 1);
             _pixelTexture.SetData(new[] { Color.White });
@@ -93,10 +94,11 @@ namespace Cliente
             try
             {
                 _networkClient = new TcpGameClient("localhost", 8080);
+                _networkClient.OnErrorOccurred += erro => _mensagemErro = erro;
                 _networkClient.OnConnectionStatusChanged += (status) => _statusConexao = status;
                 _networkClient.OnGameStateReceived += (gameState) => _estadoJogoRede = gameState;
-            _networkClient.OnClientIdReceived += (clienteId) => _meuClienteId = clienteId;
-                
+                _networkClient.OnClientIdReceived += (clienteId) => _meuClienteId = clienteId;
+
                 _conectado = await _networkClient.ConectarAsync();
                 if (_conectado)
                 {
@@ -131,12 +133,12 @@ namespace Cliente
                     _ = Task.Run(TentarConectarRede);
                 }
             }
-            
+
             if (!gameOverAtual)
             {
                 // Processar input
                 ProcessarTeclas(keyboardState);
-                
+
                 // Se estiver em modo rede, enviar input para o servidor
                 if (_modoRede && _conectado && _networkClient != null)
                 {
@@ -228,7 +230,7 @@ namespace Cliente
                     _gameOver = true;
                 }
 
-                proximoAsteroide:;
+            proximoAsteroide:;
             }
 
             // Spawnar novo asteroide a cada 40 quadros
@@ -256,7 +258,7 @@ namespace Cliente
 
             // Verificar GameOver (local ou do servidor)
             bool gameOverAtual = _gameOver || (_modoRede && _estadoJogoRede?.GameOver == true);
-            
+
             if (!gameOverAtual)
             {
                 if (_modoRede && _estadoJogoRede != null)
@@ -327,6 +329,18 @@ namespace Cliente
             // Desenhar status da conexão
             DesenharTexto($"Status: {_statusConexao}", new Vector2(150, _graphics.PreferredBackBufferHeight - 30), Color.LightGreen);
 
+            // Mostrar ID do cliente (se conectado)
+            if (!string.IsNullOrEmpty(_meuClienteId))
+            {
+                DesenharTexto($"ID: {_meuClienteId}", new Vector2(150, _graphics.PreferredBackBufferHeight - 70), Color.LightBlue, 0.8f);
+            }
+
+            // Mostrar erro, se houver
+            if (!string.IsNullOrEmpty(_mensagemErro))
+            {
+                DesenharTexto($"Erro: {_mensagemErro}", new Vector2(150, _graphics.PreferredBackBufferHeight - 90), Color.OrangeRed, 0.8f);
+            }
+
             // Instruções
             if (!_modoRede)
             {
@@ -348,11 +362,11 @@ namespace Cliente
                 if (jogadoresMortos > 0)
                 {
                     Vector2 posicaoIndicador = new Vector2(_graphics.PreferredBackBufferWidth - 120, _graphics.PreferredBackBufferHeight - 60);
-                    
+
                     // Desenhar X vermelho
                     DesenharLinha(posicaoIndicador + new Vector2(-8, -8), posicaoIndicador + new Vector2(8, 8), Color.Red, 3);
                     DesenharLinha(posicaoIndicador + new Vector2(-8, 8), posicaoIndicador + new Vector2(8, -8), Color.Red, 3);
-                    
+
                     // Texto indicando quantos jogadores morreram
                     string textoMortos = jogadoresMortos == 1 ? "1 JOGADOR MORTO" : $"{jogadoresMortos} JOGADORES MORTOS";
                     DesenharTexto(textoMortos, posicaoIndicador + new Vector2(0, 20), Color.Red, 0.8f);
@@ -387,7 +401,7 @@ namespace Cliente
         {
             // Definir cores baseadas se é a nave do jogador ou não e se está viva
             Color corPrincipal, corCockpit, corCentro;
-            
+
             if (!viva)
             {
                 // Nave morta: cores escuras/transparentes
@@ -485,7 +499,7 @@ namespace Cliente
 
         private void DesenharPonto(Vector2 posicao, Color cor, int tamanho)
         {
-            var destino = new Rectangle((int)posicao.X - tamanho/2, (int)posicao.Y - tamanho/2, tamanho, tamanho);
+            var destino = new Rectangle((int)posicao.X - tamanho / 2, (int)posicao.Y - tamanho / 2, tamanho, tamanho);
             _spriteBatch.Draw(_pixelTexture, destino, cor);
         }
 

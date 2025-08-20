@@ -45,7 +45,7 @@ public class TcpGameServer
 
             // Task para aceitar conexões de clientes (paralelismo)
             var aceitarConexoesTask = Task.Run(async () => await AceitarConexoesAsync(_cancellationTokenSource.Token));
-            
+
             // Task para loop principal do jogo (paralelismo)
             var gameLoopTask = Task.Run(async () => await GameLoopAsync(_cancellationTokenSource.Token));
 
@@ -72,19 +72,19 @@ public class TcpGameServer
                 {
                     var tcpClient = await _tcpListener.AcceptTcpClientAsync();
                     var clienteId = Guid.NewGuid().ToString();
-                    
+
                     Console.WriteLine($"✅ Cliente conectado: {clienteId} ({tcpClient.Client.RemoteEndPoint})");
 
                     var clientConnection = new ClientConnection(clienteId, tcpClient);
                     _clientes.TryAdd(clienteId, clientConnection);
 
                     // Enviar ID do cliente para ele se identificar
-            await EnviarMensagemAsync(clientConnection, "CLIENT_ID", clienteId);
+                    await EnviarMensagemAsync(clientConnection, "CLIENT_ID", clienteId);
 
                     // PARALELISMO: Cada cliente é tratado em uma Task separada
                     _ = Task.Run(async () => await TratarClienteAsync(clientConnection, cancellationToken));
                 }
-                
+
                 await Task.Delay(10, cancellationToken); // Pequeno delay para evitar uso excessivo de CPU
             }
             catch (ObjectDisposedException)
@@ -106,7 +106,7 @@ public class TcpGameServer
     private async Task TratarClienteAsync(ClientConnection cliente, CancellationToken cancellationToken)
     {
         var mensagemBuffer = string.Empty; // Buffer para mensagens incompletas
-        
+
         try
         {
             var buffer = new byte[4096];
@@ -119,7 +119,7 @@ public class TcpGameServer
             {
                 // Leitura assíncrona para manter responsividade
                 var bytesRead = await stream.ReadAsync(buffer.AsMemory(0, buffer.Length), cancellationToken);
-                
+
                 if (bytesRead == 0)
                 {
                     // Cliente desconectou
@@ -128,10 +128,10 @@ public class TcpGameServer
 
                 var dadosRecebidos = Encoding.UTF8.GetString(buffer, 0, bytesRead);
                 mensagemBuffer += dadosRecebidos;
-                
+
                 // Processar mensagens completas (terminadas com \n)
                 var linhas = mensagemBuffer.Split('\n');
-                
+
                 // Processar todas as mensagens completas
                 for (int i = 0; i < linhas.Length - 1; i++)
                 {
@@ -140,7 +140,7 @@ public class TcpGameServer
                         await ProcessarMensagemClienteAsync(cliente, linhas[i].Trim());
                     }
                 }
-                
+
                 // Manter a última linha (pode estar incompleta)
                 mensagemBuffer = linhas[linhas.Length - 1];
             }
@@ -152,9 +152,7 @@ public class TcpGameServer
         finally
         {
             // Remover cliente da lista e fechar conexão
-            _clientes.TryRemove(cliente.Id, out _);
-            cliente.TcpClient.Close();
-            Console.WriteLine($"❌ Cliente desconectado: {cliente.Id}");
+            HandleClientDisconnect(cliente.Id);
         }
     }
 
@@ -169,7 +167,7 @@ public class TcpGameServer
                 return;
 
             var mensagem = JsonConvert.DeserializeObject<NetworkMessage>(mensagemJson);
-            if (mensagem == null) 
+            if (mensagem == null)
             {
                 Console.WriteLine($"⚠️ Mensagem JSON nula do cliente {cliente.Id}: {mensagemJson}");
                 return;
@@ -193,7 +191,7 @@ public class TcpGameServer
                     // Responder ao ping para manter conexão viva
                     await EnviarMensagemAsync(cliente, "PONG", "OK");
                     break;
-                    
+
                 default:
                     Console.WriteLine($"⚠️ Tipo de mensagem desconhecido do cliente {cliente.Id}: {mensagem.Tipo}");
                     break;
@@ -226,7 +224,7 @@ public class TcpGameServer
                 {
                     // Processar inputs de todos os clientes conectados
                     var inputs = new Dictionary<string, PlayerInput>();
-                    
+
                     foreach (var cliente in _clientes.Values)
                     {
                         if (cliente.UltimoInput != null)
@@ -237,7 +235,7 @@ public class TcpGameServer
 
                     // Atualizar estado do jogo (inclui processamento paralelo de colisões)
                     var estadoJogo = _gameEngine.AtualizarJogo(inputs);
-                    
+
                     // SEMPRE enviar estado atualizado para todos os clientes conectados
                     await BroadcastEstadoJogoAsync(estadoJogo);
                 }
@@ -246,7 +244,7 @@ public class TcpGameServer
                 var frameEnd = DateTime.UtcNow;
                 var frameElapsed = (int)(frameEnd - frameStart).TotalMilliseconds;
                 var sleepTime = Math.Max(0, frameTime - frameElapsed);
-                
+
                 if (sleepTime > 0)
                 {
                     await Task.Delay(sleepTime, cancellationToken);
@@ -283,8 +281,7 @@ public class TcpGameServer
             catch (Exception ex)
             {
                 Console.WriteLine($"⚠️ Erro ao enviar para cliente {cliente.Id}: {ex.Message}");
-                // Marcar cliente para remoção
-                _clientes.TryRemove(cliente.Id, out _);
+                HandleClientDisconnect(cliente.Id);
             }
         });
 
@@ -341,6 +338,25 @@ public class TcpGameServer
 
         _tcpListener?.Stop();
         Console.WriteLine("✅ Servidor parado");
+    }
+
+    /// <summary>
+    /// Remove cliente da lista e remove sua nave do estado do jogo
+    /// </summary>
+    private void HandleClientDisconnect(string clientId)
+    {
+        if (_clientes.TryRemove(clientId, out var client))
+        {
+            client.TcpClient.Close();
+            Console.WriteLine($"❌ Cliente removido: {clientId}");
+
+            // Remover nave associada ao cliente
+            var estadoJogo = _gameEngine.ObterEstadoJogo();
+            if (estadoJogo.Naves.Remove(clientId))
+            {
+                Console.WriteLine($"🚫 Nave do jogador {clientId} removida do jogo");
+            }
+        }
     }
 }
 

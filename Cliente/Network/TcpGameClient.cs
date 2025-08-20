@@ -43,10 +43,10 @@ public class TcpGameClient
             OnConnectionStatusChanged?.Invoke("Conectando ao servidor...");
 
             _tcpClient = new TcpClient();
-            
+
             // Conexão assíncrona para evitar bloqueio da UI
             await _tcpClient.ConnectAsync(_serverHost, _serverPort);
-            
+
             _stream = _tcpClient.GetStream();
             _isConnected = true;
 
@@ -87,14 +87,17 @@ public class TcpGameClient
             var mensagemJson = JsonConvert.SerializeObject(mensagem) + "\n";
             var dados = Encoding.UTF8.GetBytes(mensagemJson);
 
-            // Envio assíncrono para evitar bloqueio
             await _stream.WriteAsync(dados.AsMemory());
             await _stream.FlushAsync();
         }
+        catch (IOException ioEx)
+        {
+            OnErrorOccurred?.Invoke($"⚠️ Falha ao enviar input (conexão perdida): {ioEx.Message}");
+            await DesconectarAsync();
+        }
         catch (Exception ex)
         {
-            OnErrorOccurred?.Invoke($"Erro ao enviar input: {ex.Message}");
-            await DesconectarAsync();
+            OnErrorOccurred?.Invoke($"Erro inesperado ao enviar input: {ex.Message}");
         }
     }
 
@@ -113,7 +116,7 @@ public class TcpGameClient
             {
                 // Leitura assíncrona para não bloquear
                 var bytesRead = await _stream.ReadAsync(buffer.AsMemory(0, buffer.Length), cancellationToken);
-                
+
                 if (bytesRead == 0)
                 {
                     // Servidor desconectou
@@ -123,10 +126,10 @@ public class TcpGameClient
 
                 var dadosRecebidos = Encoding.UTF8.GetString(buffer, 0, bytesRead);
                 mensagemBuffer += dadosRecebidos;
-                
+
                 // Processar mensagens completas (terminadas com \n)
                 var linhas = mensagemBuffer.Split('\n');
-                
+
                 // Processar todas as mensagens completas
                 for (int i = 0; i < linhas.Length - 1; i++)
                 {
@@ -135,7 +138,7 @@ public class TcpGameClient
                         await ProcessarMensagemAsync(linhas[i].Trim());
                     }
                 }
-                
+
                 // Manter a última linha (pode estar incompleta)
                 mensagemBuffer = linhas[linhas.Length - 1];
             }
@@ -165,7 +168,7 @@ public class TcpGameClient
                 return;
 
             var mensagem = JsonConvert.DeserializeObject<NetworkMessage>(mensagemJson);
-            if (mensagem == null) 
+            if (mensagem == null)
             {
                 System.Diagnostics.Debug.WriteLine($"⚠️ Mensagem JSON nula: {mensagemJson}");
                 return;
