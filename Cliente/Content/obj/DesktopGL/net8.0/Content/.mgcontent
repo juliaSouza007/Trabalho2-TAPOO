@@ -5,8 +5,16 @@
   <Config />
   <SourceFiles>
     <File>/home/a2023952969/Documentos/Trabalho2-TAPOO/Cliente/Content/GameFont.spritefont</File>
+    <File>/home/a2023952969/Documentos/Trabalho2-TAPOO/Cliente/Content/sprites/asteroide.png</File>
+    <File>/home/a2023952969/Documentos/Trabalho2-TAPOO/Cliente/Content/sprites/fundoJogo.jpg</File>
+    <File>/home/a2023952969/Documentos/Trabalho2-TAPOO/Cliente/Content/sprites/home.png</File>
+    <File>/home/a2023952969/Documentos/Trabalho2-TAPOO/Cliente/Content/sprites/nave.png</File>
   </SourceFiles>
   <DestFiles>
+    <File xsi:nil="true" />
+    <File xsi:nil="true" />
+    <File xsi:nil="true" />
+    <File xsi:nil="true" />
     <File xsi:nil="true" />
   </DestFiles>
 </SourceFileCollection>

@@ -55,6 +55,12 @@ namespace Cliente
         private int _indiceOpcaoMenu = 0;
         private readonly string[] _opcoesMenu = { "Iniciar Partida", "Sair" };
 
+        // ======== SPRITES =========
+        private Texture2D _naveTexture = null!;
+        private Texture2D _asteroideTexture = null!;
+        private Texture2D _fundoTexture = null!;
+        private Texture2D _homeTexture = null!;
+
         public JogoAsteroidesCliente()
         {
             _graphics = new GraphicsDeviceManager(this);
@@ -97,6 +103,11 @@ namespace Cliente
                 _gameFont = null!; // Garantir que a fonte seja nula para evitar erros de referência
             }
 
+            // imagens
+            _naveTexture = Content.Load<Texture2D>("sprites/nave");
+            _asteroideTexture = Content.Load<Texture2D>("sprites/asteroide");
+            _fundoTexture = Content.Load<Texture2D>("sprites/fundoJogo");
+            _homeTexture = Content.Load<Texture2D>("sprites/home");
         }
 
         /// <summary>
@@ -324,28 +335,31 @@ namespace Cliente
 
         protected override void Draw(GameTime gameTime)
         {
-            GraphicsDevice.Clear(Color.Black);
+            _spriteBatch.Begin();
+
+            // Fundo com imagem
+            _spriteBatch.Draw(
+                _fundoTexture,
+                new Rectangle(0, 0, _graphics.PreferredBackBufferWidth, _graphics.PreferredBackBufferHeight),
+                Color.White
+            );
 
             if (_estadoAtual == EstadoTela.MenuInicial)
             {
-                _spriteBatch.Begin();
-
-                DesenharTexto("JOGO ASTEROIDES", new Vector2(400, 120), Color.White, 2f);
+                _spriteBatch.Draw(_homeTexture, new Vector2(205, 35), null, Color.White, 0f, Vector2.Zero, 0.8f, SpriteEffects.None, 0f);
 
                 for (int i = 0; i < _opcoesMenu.Length; i++)
                 {
                     Color cor = (i == _indiceOpcaoMenu) ? Color.Yellow : Color.Gray;
-                    DesenharTexto(_opcoesMenu[i], new Vector2(400, 200 + i * 40), cor, 1.2f);
+                    DesenharTexto(_opcoesMenu[i], new Vector2(400, 450 + i * 40), cor, 1.2f);
                 }
 
 
-                DesenharTexto("Use ENTER para iniciar || Use as SETAS para navegar", new Vector2(400, 360), Color.White, 0.8f);
+                DesenharTexto("Use ENTER para iniciar || Use as SETAS para navegar", new Vector2(400, 400), Color.White, 0.8f);
 
                 _spriteBatch.End();
                 return; // não desenha o jogo ainda
             }
-
-            _spriteBatch.Begin();
 
             // Verificar GameOver (local ou do servidor)
             bool gameOverAtual = _gameOver || (_modoRede && _estadoJogoRede?.GameOver == true);
@@ -418,24 +432,24 @@ namespace Cliente
             DesenharTexto(textoPontuacao, new Vector2(larguraTela / 2, 20), Color.Yellow, 1.5f);
 
             // Desenhar status da conexão
-            DesenharTexto($"Status: {_statusConexao}", new Vector2(150, _graphics.PreferredBackBufferHeight - 30), Color.LightGreen);
+            DesenharTexto($"Status: {_statusConexao}", new Vector2(165, _graphics.PreferredBackBufferHeight - 30), Color.LightGreen);
 
             // Mostrar ID do cliente (se conectado)
             if (!string.IsNullOrEmpty(_meuClienteId))
             {
-                DesenharTexto($"ID: {_meuClienteId}", new Vector2(150, _graphics.PreferredBackBufferHeight - 70), Color.LightBlue, 0.8f);
+                DesenharTexto($"ID: {_meuClienteId}", new Vector2(185, _graphics.PreferredBackBufferHeight - 70), Color.LightBlue, 0.8f);
             }
 
             // Mostrar erro, se houver
             if (!string.IsNullOrEmpty(_mensagemErro))
             {
-                DesenharTexto($"Erro: {_mensagemErro}", new Vector2(150, _graphics.PreferredBackBufferHeight - 90), Color.OrangeRed, 0.8f);
+                DesenharTexto($"Erro: {_mensagemErro}", new Vector2(200, _graphics.PreferredBackBufferHeight - 90), Color.OrangeRed, 0.8f);
             }
 
             // Instruções
             if (!_modoRede)
             {
-                DesenharTexto("Pressione R para tentar conectar online", new Vector2(150, _graphics.PreferredBackBufferHeight - 50), Color.Yellow);
+                DesenharTexto("Pressione R para tentar conectar online", new Vector2(200, _graphics.PreferredBackBufferHeight - 50), Color.Yellow);
             }
 
             // Indicador de jogadores mortos no canto inferior direito
@@ -480,65 +494,58 @@ namespace Cliente
 
         private void DesenharTiro(Tiro tiro)
         {
-            DesenharPonto(tiro.Pos, Color.Yellow, 5);
+            DesenharPonto(tiro.Pos, Color.Red, 5);
         }
 
         private void DesenharAsteroide(Asteroide asteroide)
         {
-            DesenharCirculo(asteroide.Posicao, asteroide.Raio, Color.Brown);
+            if (_asteroideTexture != null)
+            {
+                // Calcular origem central do sprite
+                var origem = new Vector2(_asteroideTexture.Width / 2f, _asteroideTexture.Height / 2f);
+
+                // Calcular escala baseada no raio do asteroide
+                float escala = (asteroide.Raio * 2f) / _asteroideTexture.Width;
+
+                _spriteBatch.Draw(
+                    _asteroideTexture,
+                    asteroide.Posicao,
+                    null,           // desenhar a textura inteira
+                    Color.White,    // cor padrão
+                    0f,             // rotação
+                    origem,         // ponto de origem central
+                    escala,         // escala proporcional ao raio
+                    SpriteEffects.None,
+                    0f
+                );
+            }
         }
 
         private void DesenharNaveDetalhada(Vector2 centro, float rotacao = 0f, bool isMinhanave = false, bool viva = true)
         {
-            // Definir cores baseadas se é a nave do jogador ou não e se está viva
-            Color corPrincipal, corCockpit, corCentro;
-
-            if (!viva)
+            if (_naveTexture != null)
             {
-                // Nave morta: cores escuras/transparentes
-                corPrincipal = Color.DarkRed;
-                corCockpit = Color.Gray;
-                corCentro = Color.DarkGray;
+                // Calcular a origem para centralizar o sprite
+                var origem = new Vector2(_naveTexture.Width / 2f, _naveTexture.Height / 2f);
+
+                // Cor opcional: se quiser escurecer a nave morta
+                Color cor = viva ? Color.White : Color.Gray;
+
+                // Desenhar o sprite da nave
+                _spriteBatch.Draw(
+                    _naveTexture,
+                    centro,
+                    null,       // desenhar a textura inteira
+                    cor,
+                    rotacao,    // rotação
+                    origem,     // ponto de origem central
+                    0.2f,         // escala
+                    SpriteEffects.None,
+                    0f
+                );
+
+                return; // Sai do método após desenhar o sprite
             }
-            else
-            {
-                // Nave viva: cores normais
-                corPrincipal = isMinhanave ? Color.Lime : Color.Cyan;
-                corCockpit = isMinhanave ? Color.Yellow : Color.White;
-                corCentro = isMinhanave ? Color.Green : Color.LightBlue;
-            }
-
-            // Corpo principal da nave (triângulo maior)
-            var vertices = new Vector2[]
-            {
-                centro + new Vector2(0, -12),   // topo
-                centro + new Vector2(-10, 12),  // esquerda
-                centro + new Vector2(10, 12)    // direita
-            };
-
-            // Aplicar rotação se necessário (para futuras implementações)
-            // Por enquanto mantemos simples sem rotação visual
-
-            // Desenhar contorno da nave
-            for (int i = 0; i < vertices.Length; i++)
-            {
-                var inicio = vertices[i];
-                var fim = vertices[(i + 1) % vertices.Length];
-                DesenharLinha(inicio, fim, corPrincipal, 2);
-            }
-
-            // Cockpit (parte superior)
-            DesenharPonto(centro + new Vector2(0, -8), corCockpit, 4);
-            DesenharPonto(centro + new Vector2(0, -4), corCockpit, 3);
-
-            // Motores (parte traseira)
-            DesenharPonto(centro + new Vector2(-6, 10), Color.Orange, 3);
-            DesenharPonto(centro + new Vector2(6, 10), Color.Orange, 3);
-            DesenharPonto(centro + new Vector2(-6, 12), Color.Red, 2);
-            DesenharPonto(centro + new Vector2(6, 12), Color.Red, 2);
-
-            // Centro da nave
-            DesenharPonto(centro, corCentro, 2);
         }
 
         private void DesenharLinha(Vector2 inicio, Vector2 fim, Color cor, int espessura)

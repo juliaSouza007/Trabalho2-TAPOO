@@ -26,3 +26,7 @@
 /home/a2023952969/Documentos/Trabalho2-TAPOO/Cliente/obj/Debug/net8.0/Cliente.pdb
 /home/a2023952969/Documentos/Trabalho2-TAPOO/Cliente/obj/Debug/net8.0/Cliente.genruntimeconfig.cache
 /home/a2023952969/Documentos/Trabalho2-TAPOO/Cliente/obj/Debug/net8.0/ref/Cliente.dll
+/home/a2023952969/Documentos/Trabalho2-TAPOO/Cliente/bin/Debug/net8.0/Content/sprites/asteroide.xnb
+/home/a2023952969/Documentos/Trabalho2-TAPOO/Cliente/bin/Debug/net8.0/Content/sprites/fundoJogo.xnb
+/home/a2023952969/Documentos/Trabalho2-TAPOO/Cliente/bin/Debug/net8.0/Content/sprites/home.xnb
+/home/a2023952969/Documentos/Trabalho2-TAPOO/Cliente/bin/Debug/net8.0/Content/sprites/nave.xnb
