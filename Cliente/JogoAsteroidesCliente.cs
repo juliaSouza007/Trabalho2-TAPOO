@@ -383,13 +383,13 @@ namespace Cliente
                     // Desenhar tiros do servidor
                     foreach (var tiro in _estadoJogoRede.Tiros)
                     {
-                        DesenharPonto(tiro.Posicao, Color.Yellow, 5);
+                        DesenharTiroOnline(tiro);
                     }
 
                     // Desenhar asteroides do servidor
                     foreach (var asteroide in _estadoJogoRede.Asteroides)
                     {
-                        DesenharCirculo(asteroide.Posicao, asteroide.Raio, Color.Brown);
+                        DesenharAsteroideOnline(asteroide);
                     }
                 }
                 else
@@ -520,6 +520,33 @@ namespace Cliente
                 );
             }
         }
+
+        private void DesenharTiroOnline(TiroData tiro)
+        {
+            DesenharPonto(tiro.Posicao, Color.Red, 5);
+        }
+
+        private void DesenharAsteroideOnline(AsteroideData asteroide)
+        {
+            if (_asteroideTexture != null)
+            {
+                var origem = new Vector2(_asteroideTexture.Width / 2f, _asteroideTexture.Height / 2f);
+                float escala = (asteroide.Raio * 2f) / _asteroideTexture.Width;
+
+                _spriteBatch.Draw(
+                    _asteroideTexture,
+                    asteroide.Posicao,
+                    null,
+                    Color.White,
+                    0f,
+                    origem,
+                    escala,
+                    SpriteEffects.None,
+                    0f
+                );
+            }
+        }
+
 
         private void DesenharNaveDetalhada(Vector2 centro, float rotacao = 0f, bool isMinhanave = false, bool viva = true)
         {
